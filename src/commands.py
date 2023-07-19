@@ -1,5 +1,7 @@
+import concurrent.futures.thread
 import sys
-
+import threading
+import time
 import click
 import asyncio
 
@@ -26,14 +28,26 @@ def checkout(check="PyCharm") -> None:
 @cli.command()
 async def async_run() -> None:
     # Use a breakpoint in the code line below to debug your script.
-    print('async_run')  # Press ⌘F8 to toggle the breakpoint.
+    while True:
+        print('async_run')  # Press ⌘F8 to toggle the breakpoint.
+        await asyncio.sleep(2)
+
+
+@cli.command()
+def sync_run() -> None:
+    # Use a breakpoint in the code line below to debug your script.
+    while True:
+        print('sync_run')  # Press ⌘F8 to toggle the breakpoint.
+        time.sleep(2)
 
 
 async def run_command(args):
     acceptor = asyncio.Future()
+    loop = asyncio.get_running_loop()
 
     def submit():
         try:
+            asyncio.set_event_loop(loop)
             value = cli.main(args=args, standalone_mode=False)
             if asyncio.iscoroutine(value) or asyncio.isfuture(value):
                 acceptor.set_result(value)
