@@ -60,8 +60,11 @@ async def run_command(args):
                 acceptor.set_result(None)
         except click.exceptions.UsageError:
             click.echo(sys.exception(), err=True)
+            
 
     await asyncio.to_thread(submit)
+    if not acceptor.done():
+        acceptor.set_result(None)
     awaitable = await acceptor
     if awaitable is not None:
         await awaitable
