@@ -40,6 +40,11 @@ def sync_run() -> None:
         print('sync_run')  # Press ⌘F8 to toggle the breakpoint.
         time.sleep(2)
 
+@cli.command()
+@click.argument('message')
+def echo(message):
+    click.echo(message=message)
+
 
 async def run_command(args):
     acceptor = asyncio.Future()
