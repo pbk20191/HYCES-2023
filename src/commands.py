@@ -1,10 +1,7 @@
-import concurrent.futures.thread
-import sys
-import threading
 import time
 import click
 import asyncio
-
+import inspect
 
 @click.group()
 def cli():
@@ -64,15 +61,16 @@ async def run_command(args):
 
     def submit():
         asyncio.set_event_loop(loop)
-        value = cli.main(args=args, standalone_mode=False)
-        if asyncio.iscoroutine(value) or asyncio.isfuture(value):
+        try:
+            value = cli.main(args=args, standalone_mode=False)
+        except:
+            acceptor.set_result(None)
+            raise
+        if inspect.isawaitable(value):
             acceptor.set_result(value)
         else:
             acceptor.set_result(None)
-       
     await asyncio.to_thread(submit)
-    if not acceptor.done():
-        acceptor.set_result(None)
     awaitable = await acceptor
     if awaitable is not None:
         await awaitable
