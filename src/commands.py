@@ -63,17 +63,13 @@ async def run_command(args):
     loop = asyncio.get_running_loop()
 
     def submit():
-        try:
-            asyncio.set_event_loop(loop)
-            value = cli.main(args=args, standalone_mode=False)
-            if asyncio.iscoroutine(value) or asyncio.isfuture(value):
-                acceptor.set_result(value)
-            else:
-                acceptor.set_result(None)
-        except click.exceptions.UsageError:
-            click.echo(sys.exception(), err=True)
-            
-
+        asyncio.set_event_loop(loop)
+        value = cli.main(args=args, standalone_mode=False)
+        if asyncio.iscoroutine(value) or asyncio.isfuture(value):
+            acceptor.set_result(value)
+        else:
+            acceptor.set_result(None)
+       
     await asyncio.to_thread(submit)
     if not acceptor.done():
         acceptor.set_result(None)

@@ -6,6 +6,7 @@ import uvloop
 import click
 import commands
 import os, sys
+import traceback
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
@@ -29,11 +30,16 @@ async def main():
         if value == 'exit':
             break
         args = value.split(" ")
+        
         if args is None or len(args) < 1:
             click.echo("wrong command input", err=True)
             continue
-        await commands.run_command(args)
-    raise exit(os.EX_OK)
+        try:
+            await commands.run_command(args)
+        except click.UsageError as err:
+            traceback.print_exception(err)
+            click.echo(message=err, err=True)
+    raise sys.exit(os.EX_OK)
 
 
 # Press the green button in the gutter to run the script.
