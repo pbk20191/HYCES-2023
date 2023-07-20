@@ -14,35 +14,47 @@ def cli():
 @cli.command()
 @click.argument("name")
 def print_hi(name="PyCharm") -> None:
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+    """print "Hi, name"
+
+    Args:
+        name (str, optional): _description_. Defaults to "PyCharm".
+    """
+    print(f'Hi, {name}')
 
 
 @cli.command()
 @click.option("--check", is_flag=True, default=False)
 def checkout(check="PyCharm") -> None:
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'check, {check}')  # Press ⌘F8 to toggle the breakpoint.
-
+    """
+    print if flags is checked or not
+    """
+    print(f'check, {check}')
 
 @cli.command()
 async def async_run() -> None:
-    # Use a breakpoint in the code line below to debug your script.
+    """
+        run infinite nonblocking loop printing "async-run" every 2 seconds
+    """
     while True:
-        print('async_run')  # Press ⌘F8 to toggle the breakpoint.
+        print('async_run')
         await asyncio.sleep(2)
 
 
 @cli.command()
 def sync_run() -> None:
-    # Use a breakpoint in the code line below to debug your script.
+    """
+        run infinite blocking loop printing "sync-run" every 2 seconds
+    """
     while True:
-        print('sync_run')  # Press ⌘F8 to toggle the breakpoint.
+        print('sync_run')
         time.sleep(2)
 
 @cli.command()
 @click.argument('message')
 def echo(message):
+    """
+    print back the message
+    """
     click.echo(message=message)
 
 
