@@ -6,7 +6,7 @@ block_cipher = None
 
 a = Analysis(
     ['src/main.py'],
-    pathex=['.venv/lib/python3.11/site-packages'],
+    pathex=[],
     binaries=[],
     datas=[],
     hiddenimports=[],

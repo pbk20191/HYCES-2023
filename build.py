@@ -5,7 +5,6 @@ if __name__ == '__main__':
         [
             "src/main.py",
             "-F",
-            "--path", ".venv/lib/python3.11/site-packages",
             "-n", "python_app",
         ]
     )
