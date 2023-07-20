@@ -1,38 +1,45 @@
 # This is a sample Python script.
 import asyncio
-import concurrent.futures.thread
 import sys
-import time
 from Application import Application
 import uvloop
-import aiorun
 import click
-import aioconsole
 import commands
-import threading
+import os, sys
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 
-
-async def main():
-    asyncio.get_running_loop().set_debug(True)
+async def main():    
+    reader = asyncio.StreamReader(loop=asyncio.get_running_loop())
+    _, _ = await asyncio.get_running_loop().connect_read_pipe(
+        lambda: 
+            asyncio.StreamReaderProtocol(
+                stream_reader=reader, 
+                loop=asyncio.get_running_loop()
+            ), 
+        sys.stdin
+    )
     while True:
-        print("enter command: ")
-        value = await aioconsole.ainput(loop=asyncio.get_running_loop())
+        print("enter command or --help: ")
+        value = (await reader.readline()).decode()
+        if not value.endswith("\n"):
+            raise EOFError
+        value = value.rstrip("\n")
         if value == 'exit':
             break
         args = value.split(" ")
         if args is None or len(args) < 1:
-            click.echo("wrong command input")
+            click.echo("wrong command input", err=True)
             continue
         await commands.run_command(args)
-    asyncio.get_running_loop().stop()
+    raise exit(os.EX_OK)
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     with Application(debug=True) as run:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         run(main())
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

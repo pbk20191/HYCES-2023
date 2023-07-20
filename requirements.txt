@@ -1,10 +1,7 @@
-aiorun==2023.7.2
 altgraph==0.17.3
 macholib==1.16.2
-numpy==1.25.1
 protobuf==4.21.12
 pyinstaller==5.13.0
 pyinstaller-hooks-contrib==2023.5
 uvloop==0.17.0
 click~=8.1.6
-aioconsole~=0.6.1
