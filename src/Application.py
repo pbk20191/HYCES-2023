@@ -1,9 +1,8 @@
 import asyncio
 import threading
 import functools
-from typing import Coroutine, Generator, Any
+from typing import Coroutine, Generator, Any, NoReturn
 import asyncio.exceptions
-
 
 class Application:
 
@@ -20,9 +19,9 @@ class Application:
         exception = context.get("exception")
         if not isinstance(exception, Exception) and isinstance(exception, BaseException):
             raise exception
-        loop.create_task(queue.put(context))
+        loop.create_task(queue.put(context)).add_done_callback(lambda task: task.exception())
 
-    def __run_with_startup(self, coro: Coroutine[Any, Any, None] | Generator[Any, None, None]) -> None:
+    def __run_with_startup(self, coro: Coroutine[Any, Any, None] | Generator[Any, None, None]) -> NoReturn:
         """
         create and run the main event loop. This method unlikely to return
         """
@@ -35,11 +34,14 @@ class Application:
                 queue = asyncio.Queue(1)
                 exception_handler = functools.partial(self.__handle_exception, queue)
                 self.__event_loop = runner.get_loop()
-                runner.get_loop().set_exception_handler(handler=exception_handler)
-
+                runner.get_loop().set_exception_handler(exception_handler)
                 async def parking() -> None:
                     while True:
-                        context: dict[str, any] = await queue.get()
+                        context = {}                        
+                        try:
+                            context: dict[str, any] = await queue.get()
+                        except asyncio.CancelledError:
+                            break
                         try:
                             exception: Exception | None = context.get("exception")
                             if isinstance(exception, Exception):
