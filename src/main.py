@@ -7,11 +7,13 @@ import click
 import commands
 import os, sys
 import traceback
+import logging
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 
 async def main():    
+    logger = logging.getLogger().getChild("command")
     reader = asyncio.StreamReader(loop=asyncio.get_running_loop())
     _, _ = await asyncio.get_running_loop().connect_read_pipe(
         lambda: 
@@ -21,6 +23,7 @@ async def main():
             ), 
         sys.stdin
     )
+    await commands.run_command(None)
     while True:
         print("enter command or --help: ")
         value = (await reader.readline()).decode()
@@ -37,9 +40,9 @@ async def main():
         try:
             await commands.run_command(args)
         except click.UsageError as err:
-            traceback.print_exception(err)
+            logger.exception(err)
             click.echo(message=err, err=True)
-    raise sys.exit(os.EX_OK)
+    raise sys.exit()
 
 
 # Press the green button in the gutter to run the script.
