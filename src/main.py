@@ -8,12 +8,22 @@ import commands
 import os, sys
 import traceback
 import logging
+from click.parser import split_arg_string
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 
 async def main():    
     logger = logging.getLogger().getChild("command")
+    # class StdIn(asyncio.StreamReader):
+    #    def __del__(self):
+    #         print("SDFsadfasdf")
+    #         uvloop.loop.ReadUnit
+    #         if self._transport.get_extra_info("pipe"):
+    #             self._transport.pipe = None
+            
+
+
     reader = asyncio.StreamReader(loop=asyncio.get_running_loop())
     _, _ = await asyncio.get_running_loop().connect_read_pipe(
         lambda: 
@@ -32,7 +42,7 @@ async def main():
         value = value.rstrip("\n")
         if value == 'exit':
             break
-        args = value.split(" ")
+        args = split_arg_string(value)
         
         if args is None or len(args) < 1:
             click.echo("wrong command input", err=True)
