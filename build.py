@@ -6,5 +6,6 @@ if __name__ == '__main__':
             "src/main.py",
             "-F",
             "-n", "python_app",
+            "--add-data", ".env:."
         ]
     )

@@ -2,6 +2,7 @@ import time
 import click
 import asyncio
 import inspect
+import gpiozero
 
 @click.group()
 def cli():
@@ -62,7 +63,7 @@ async def run_command(args):
     def submit():
         asyncio.set_event_loop(loop)
         try:
-            value = cli.main(args=args, standalone_mode=False)
+            value = cli(args=args, standalone_mode=False)
         except:
             acceptor.set_result(None)
             raise

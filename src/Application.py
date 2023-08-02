@@ -3,37 +3,32 @@ import threading
 import functools
 from typing import Coroutine, Generator, Any, NoReturn
 import asyncio.exceptions
+import contextvars
+import sys
+import inspect
 
-class Application:
 
-    def __init__(self, debug: bool | None = None):
-        self.__event_loop: None | asyncio.AbstractEventLoop = None
-        self.__debug = debug
-        super().__init__()
+class ApplicationError(RuntimeError):
+    pass
 
-    def get_event_loop(self) -> None | asyncio.AbstractEventLoop:
-        return self.__event_loop
 
-    @staticmethod
+def ApplicationMain(entrypoint):
+    """
+    wrap the function as main entry point
+    """
     def __handle_exception(queue: asyncio.Queue, loop: asyncio.AbstractEventLoop, context: dict[str, any]) -> None:
         exception = context.get("exception")
         if not isinstance(exception, Exception) and isinstance(exception, BaseException):
             raise exception
         loop.create_task(queue.put(context)).add_done_callback(lambda task: task.exception())
 
-    def __run_with_startup(self, coro: Coroutine[Any, Any, None] | Generator[Any, None, None]) -> NoReturn:
-        """
-        create and run the main event loop. This method unlikely to return
-        """
+    @functools.wraps(entrypoint)
+    def wrapper(*args, debug: bool | None = None, context: contextvars.Context | None = None, **kwargs) -> NoReturn:
         if threading.main_thread() is not threading.current_thread():
             raise ApplicationError("app.run() can only be called on main thread")
-        if self.__event_loop is not None:
-            raise ApplicationError("app.run() should be called at most once at a time")
-        try:
-            with asyncio.Runner(debug=self.__debug) as runner:
+        with asyncio.Runner(debug=debug) as runner:
                 queue = asyncio.Queue(1)
-                exception_handler = functools.partial(self.__handle_exception, queue)
-                self.__event_loop = runner.get_loop()
+                exception_handler = functools.partial(__handle_exception, queue)
                 runner.get_loop().set_exception_handler(exception_handler)
                 async def parking() -> None:
                     while True:
@@ -54,18 +49,22 @@ class Application:
                             queue.task_done()
 
                 async def __app__():
-                    await asyncio.gather(coro, parking())
-
-                runner.run(__app__())
-        finally:
-            self.__event_loop = None
-
-    def __enter__(self):
-        return self.__run_with_startup
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
+                    if inspect.iscoroutinefunction(entrypoint):
+                        await asyncio.gather(entrypoint(*args, **kwargs), parking())
+                    else:
+                        await parking()
+                try:
+                    if not inspect.iscoroutinefunction(entrypoint):
+                        runner.get_loop().call_soon(functools.partial(entrypoint, *args, **kwargs), context=context)
+                    runner.run(coro=__app__(), context=context)
+                except RuntimeError as err:
+                    if err.args.count == 1 and err.args[0] == 'Event loop stopped before Future completed.':
+                        pass
+                    else:
+                        raise
         pass
-
-
-class ApplicationError(RuntimeError):
-    pass
+    
+    if inspect.iscoroutinefunction(entrypoint) or inspect.isfunction(entrypoint):
+        return wrapper
+    else:
+        raise ApplicationError("ApplicationMain only support function")
