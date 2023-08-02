@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager, contextmanager
 import io, sys, os, asyncio
-from typing import Generator
+from typing import Generator, AsyncGenerator, Any
 import platform
 
 
@@ -26,7 +26,7 @@ async def alloc_stdin_stream() -> Generator[asyncio.StreamReader, None, None]:
         pass
 
 
-async def input_sequence():
+async def input_sequence() -> AsyncGenerator[str, Any] :
     loop = asyncio.get_running_loop()
     event = asyncio.Event()
     message: str | None | Exception = None
