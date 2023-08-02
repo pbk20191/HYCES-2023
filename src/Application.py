@@ -1,10 +1,9 @@
 import asyncio
 import threading
 import functools
-from typing import Coroutine, Generator, Any, NoReturn
+from typing import NoReturn
 import asyncio.exceptions
 import contextvars
-import sys
 import inspect
 
 

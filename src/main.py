@@ -10,6 +10,10 @@ import traceback
 import logging
 from click.parser import split_arg_string
 import stdconsole
+from gpiozero.devices import Device
+from gpiozero.pins.pigpio import PiGPIOFactory
+from gpiozero.pins.mock import MockFactory
+
 
 @ApplicationMain
 async def main():    
@@ -35,4 +39,11 @@ async def main():
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     uvloop.install()
-    main(debug=True)
+    #Device.pin_factory = PiGPIOFactory(host=None, port=None)
+    Device.pin_factory = MockFactory()
+    try:
+        main(debug=True)
+    finally:
+        if not Device.pin_factory is None:
+            Device.pin_factory.close()
+    
