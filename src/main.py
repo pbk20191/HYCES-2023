@@ -2,7 +2,7 @@
 import asyncio
 import sys
 from Application import ApplicationMain
-import uvloop
+import platform
 import click
 import commands
 import os, sys
@@ -13,7 +13,7 @@ import stdconsole
 from gpiozero.devices import Device
 from gpiozero.pins.pigpio import PiGPIOFactory
 from gpiozero.pins.mock import MockFactory
-
+from contextlib import closing
 
 @ApplicationMain
 async def main():    
@@ -33,12 +33,16 @@ async def main():
         except click.UsageError as err:
             logger.exception(err)
             click.echo(message=err, err=True)
-    raise sys.exit()
+    sys.exit()
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    uvloop.install()
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    else:
+        import uvloop
+        uvloop.install()
     #Device.pin_factory = PiGPIOFactory(host=None, port=None)
     Device.pin_factory = MockFactory()
     try:
