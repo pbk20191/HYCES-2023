@@ -30,55 +30,24 @@ async def input_sequence() -> AsyncGenerator[str, Any] :
     loop = asyncio.get_running_loop()
     with os.fdopen(fd=os.dup(sys.stdin.fileno())) as file:
         if sys.platform == "win32":
-                from win32event import WaitForMultipleObjects, INFINITE, CreateEvent, SetEvent
-                from msvcrt import get_osfhandle
-                from win32con import WAIT_TIMEOUT, WAIT_FAILED, WAIT_OBJECT_0, WAIT_ABANDONED_0
-                from win32api import GetLastError, CloseHandle
-                event_handle = CreateEvent(None, True, False, None)
-                final_event = asyncio.Event()
-                queue = asyncio.Queue()
-                file_handle = get_osfhandle(file.fileno())
-                try:
-                    def callback():
-                        try:
-                            while loop.is_running():
-                                code = WaitForMultipleObjects([file_handle, event_handle], False, INFINITE)
-                                if code == WAIT_TIMEOUT:
-                                    continue
-                                if code == WAIT_FAILED:
-                                    win_error = GetLastError()
-                                    error = WindowsError(None, os.strerror(win_error), None, win_error, None)
-                                    loop.call_soon_threadsafe(lambda: loop.create_task(queue.put(error)))
-                                    return
-                                if code == WAIT_OBJECT_0:
-                                    value = file.readline()
-                                    if value == '' or value == '\0':
-                                        loop.call_soon_threadsafe(lambda: loop.create_task(queue.put('')))
-                                        break
-                                    else:
-                                        loop.call_soon_threadsafe(lambda: loop.create_task(queue.put(value)))
-                                    continue
-                                if code == WAIT_OBJECT_0 + 1:
-                                    loop.call_soon_threadsafe(lambda: loop.create_task(queue.put(None)))
-                                    return
-                        finally:
-                            loop.call_soon_threadsafe(final_event.set)
-                    job = asyncio.to_thread(callback)
-                    loop.create_task(job)
-                    while True:
-                        item = await queue.get()
-                        if item is None:
-                            break
-                        if item == '\0':
-                            return
-                        if isinstance(item, Exception):
-                            raise item
-                        if isinstance(item, str):
-                            yield item.removesuffix('\n')
-                finally:
-                    SetEvent(event_handle)
-                    await final_event.wait()
-                    CloseHandle(event_handle)
+            from msvcrt import get_osfhandle
+            from asyncio.windows_events import ProactorEventLoop, IocpProactor
+            proactor: None | IocpProactor = None
+            if isinstance(loop, ProactorEventLoop):
+                proactor = loop._proactor
+                if isinstance(proactor, IocpProactor):
+                    pass
+                else:
+                    raise RuntimeError(f'loop._proactor is not {IocpProactor} but {loop._proactor} found')
+                pass
+            else:
+                raise RuntimeError("running loop must be a ProactorEventLoop")
+            file_handle = get_osfhandle(file.fileno())
+            while await proactor.wait_for_handle(file_handle):
+                value = file.readline()
+                if value == '' or value == '\0':
+                    break
+                yield value.removesuffix('\n')
         else:
             event = asyncio.Event()
             message: str | None | Exception = None
