@@ -7,3 +7,4 @@ uvloop==0.17.0; sys.platform != 'win32'
 click~=8.1.6
 gpiozero~=1.6.2
 pigpio~=1.78
+pywin32==302; sys.platform == 'win32'

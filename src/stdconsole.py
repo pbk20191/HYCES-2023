@@ -30,27 +30,55 @@ async def input_sequence() -> AsyncGenerator[str, Any] :
     loop = asyncio.get_running_loop()
     with os.fdopen(fd=os.dup(sys.stdin.fileno())) as file:
         if sys.platform == "win32":
-            mp_r_pipe, mp_w_pipe = multiprocessing.Pipe(False)
-            with mp_r_pipe, mp_w_pipe:
-                reader = asyncio.StreamReader(loop=loop)
-                r_transport, r_protocol = await loop.connect_read_pipe(
-                    lambda: asyncio.StreamReaderProtocol(reader, loop=loop),
-                    mp_r_pipe
-                )
-                reader_process = multiprocessing.Process(target=__input_worker, name=None, daemon=True, args=[mp_w_pipe, sys.stdin.fileno()])
+                from win32event import WaitForMultipleObjects, INFINITE, CreateEvent, SetEvent
+                from msvcrt import get_osfhandle
+                from win32con import WAIT_TIMEOUT, WAIT_FAILED, WAIT_OBJECT_0, WAIT_ABANDONED_0
+                from win32api import GetLastError, CloseHandle
+                event_handle = CreateEvent(None, True, False, None)
+                final_event = asyncio.Event()
+                queue = asyncio.Queue()
+                file_handle = get_osfhandle(file.fileno())
                 try:
-                    reader_process.start()
-                    while not reader.at_eof():
-                        value = (await reader.readline()).decode()
-                        if reader.at_eof() :
+                    def callback():
+                        try:
+                            while loop.is_running():
+                                code = WaitForMultipleObjects([file_handle, event_handle], False, INFINITE)
+                                if code == WAIT_TIMEOUT:
+                                    continue
+                                if code == WAIT_FAILED:
+                                    win_error = GetLastError()
+                                    error = WindowsError(None, os.strerror(win_error), None, win_error, None)
+                                    loop.call_soon_threadsafe(lambda: loop.create_task(queue.put(error)))
+                                    return
+                                if code == WAIT_OBJECT_0:
+                                    value = file.readline()
+                                    if value == '' or value == '\0':
+                                        loop.call_soon_threadsafe(lambda: loop.create_task(queue.put('')))
+                                        break
+                                    else:
+                                        loop.call_soon_threadsafe(lambda: loop.create_task(queue.put(value)))
+                                    continue
+                                if code == WAIT_OBJECT_0 + 1:
+                                    loop.call_soon_threadsafe(lambda: loop.create_task(queue.put(None)))
+                                    return
+                        finally:
+                            loop.call_soon_threadsafe(final_event.set)
+                    job = asyncio.to_thread(callback)
+                    loop.create_task(job)
+                    while True:
+                        item = await queue.get()
+                        if item is None:
                             break
-                        yield value.removesuffix('\n')
+                        if item == '\0':
+                            return
+                        if isinstance(item, Exception):
+                            raise item
+                        if isinstance(item, str):
+                            yield item.removesuffix('\n')
                 finally:
-                    reader_process.terminate()
-                    r_transport.close()
-                    event = asyncio.Event()
-                    loop.call_soon(event.set)
-                    await event.wait()
+                    SetEvent(event_handle)
+                    await final_event.wait()
+                    CloseHandle(event_handle)
         else:
             event = asyncio.Event()
             message: str | None | Exception = None
@@ -83,47 +111,4 @@ async def input_sequence() -> AsyncGenerator[str, Any] :
                     event.clear()
             finally:
                 loop.remove_reader(file)
-
-if sys.platform == 'win32':
-    from multiprocessing.connection import PipeConnection as mp_pipe_connection
-    def __input_worker(mp_pipe: mp_pipe_connection, fd:int):
-        with os.fdopen(fd=fd, mode='rt', closefd=False) as file:
-            sys.stdin = file
-            while True:
-                value = None
-                try:
-                    value = input('\0')
-                except EOFError:
-                    mp_pipe.send_bytes(''.encode())
-                    return
-                except:
-                    mp_pipe.send_bytes(''.encode())
-                    raise
-                if value == '' or value == '\0':
-                    mp_pipe.send_bytes('\n'.encode())
-                else:
-                    mp_pipe.send_bytes(value.removesuffix('\n').encode())
-                    mp_pipe.send_bytes('\n'.encode())
-            
-
-async def readLine(file:io.TextIOWrapper) -> str:
-    loop = asyncio.get_running_loop()
-    token = loop.create_future()
-    def callback():
-        try:
-            message = file.readline()
-            if message == '':
-                raise EOFError
-            else:
-                token.set_result(message.removesuffix('\n'))
-        except:
-            token.set_exception(sys.exception())     
-    loop.add_reader(file, callback)
-    try:
-        return await token
-    finally:
-        loop.remove_reader(file)
-    
-async def read_std_in() -> str:
-    loop = asyncio.get_running_loop()
-    token = loop.create_future()
+   
