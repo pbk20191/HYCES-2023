@@ -49,35 +49,19 @@ async def input_sequence() -> AsyncGenerator[str, Any] :
                     break
                 yield value.removesuffix('\n')
         else:
-            event = asyncio.Event()
-            message: str | None | Exception = None
             os.set_blocking(file.fileno(), False)
-            def callback():
-                nonlocal message
-                if event.is_set():
-                    return
-                try:
-                    message = file.readline()
-                except:
-                    message = sys.exception()       
-                event.set()
-            loop.add_reader(file, callback)
+            reader = asyncio.StreamReader(loop=loop)
+            r_transport, r_protocol = await loop.connect_read_pipe(
+                lambda: asyncio.StreamReaderProtocol(reader, loop=loop),
+                file
+            )
             try:
-                while True:
-                    await event.wait()
-                    print(message)
-                    if isinstance(message, str):
-                        value: str = message
-                        if value == '':
-                            break
-                        else:
-                            yield value.removesuffix('\n')
-                    elif message is None:
-                        pass
-                    else:
-                        raise message
-                    message = None
-                    event.clear()
+                while not reader.at_eof():
+                    value = (await reader.readline()).decode()
+                    if not reader.at_eof():
+                        yield value.removesuffix('\n')
             finally:
-                loop.remove_reader(file)
-   
+                r_transport.close()
+                event = asyncio.Event()
+                loop.call_soon(event.set)
+                await event.wait()
