@@ -13,7 +13,6 @@ import stdconsole
 from gpiozero.devices import Device
 from gpiozero.pins.pigpio import PiGPIOFactory
 from gpiozero.pins.mock import MockFactory
-from contextlib import closing
 
 @ApplicationMain
 async def main():    
@@ -45,9 +44,5 @@ if __name__ == '__main__':
         uvloop.install()
     #Device.pin_factory = PiGPIOFactory(host=None, port=None)
     Device.pin_factory = MockFactory()
-    try:
-        main(debug=True)
-    finally:
-        if not Device.pin_factory is None:
-            Device.pin_factory.close()
+    main(debug=True)
     
