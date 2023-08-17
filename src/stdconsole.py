@@ -1,29 +1,5 @@
-from contextlib import asynccontextmanager, contextmanager
 import io, sys, os, asyncio
 from typing import Generator, AsyncGenerator, Any
-import platform
-import threading, multiprocessing, contextlib
-
-@asynccontextmanager
-async def alloc_stdin_stream() -> Generator[asyncio.StreamReader, None, None]:
-    loop = asyncio.get_running_loop()
-    transport = None
-    try:
-        with io.open(file=os.dup(sys.stdin.fileno()), mode='r', encoding='utf-8') as file:
-            reader = asyncio.StreamReader(loop=loop)
-            print("fd file is ", file.fileno())
-            transport, protocol = await loop.connect_read_pipe(
-                lambda: asyncio.StreamReaderProtocol(stream_reader=reader, loop=loop),
-                pipe=file
-            )
-            yield reader
-    finally:
-        transport.close()
-        idle_token = asyncio.futures.Future()
-        loop.call_soon(lambda: idle_token.set_result(None))
-        if loop.is_running():
-            await idle_token
-        pass
 
 
 async def input_sequence() -> AsyncGenerator[str, Any] :
