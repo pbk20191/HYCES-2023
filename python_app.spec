@@ -5,15 +5,15 @@ block_cipher = None
 
 
 a = Analysis(
-    ['src/main.py'],
+    ['src\\main.py'],
     pathex=[],
     binaries=[],
-    datas=[('.env', '.')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['pyinstaller', 'pyinstaller-hooks-contrib', 'setuptools'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

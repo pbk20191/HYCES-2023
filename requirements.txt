@@ -1,8 +1,4 @@
-altgraph==0.17.3
-macholib==1.16.2
-protobuf==4.21.12
 pyinstaller==5.13.0
-pyinstaller-hooks-contrib==2023.5
 uvloop==0.17.0; sys.platform != 'win32'
 click~=8.1.6
 gpiozero~=1.6.2

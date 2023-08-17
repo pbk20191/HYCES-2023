@@ -1,7 +1,6 @@
 # HYCES-2023
 HYCES-2023 raspberry pi project
-이 프로젝트는 Window 제외한 Mac과 Linux에서 동작합니다.
-
+이 프로젝트는 Window, Mac, Linux에서 동작하지만 권장 운영체제는 Mac과 Linux입니다.
 
 프로젝트 세팅 방법
 -----
@@ -35,3 +34,8 @@ src/main.py 에 아래와 같은 소스코드 중 하나를 가지고 3가지 �
 
     # this pin_facotry will search for remote GPIO from host:port setup
     Device.pin_factory = PiGPIOFactory(host, port)
+
+
+Window 주의사항
+---------
+asyncio lib의 한계점과 winAPI의 특이점으로 인해 stdin 처리 구현에 상당한 차이가 있으며, exit 동작도 상당히 다릅니다.
